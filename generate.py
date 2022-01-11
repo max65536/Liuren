@@ -51,7 +51,14 @@ class Pan(object):
         pan.append("%c%c%c%c" % (lst[2], lst[1], lst[0], lst[11]))
         return '\n'.join(pan)
 
+    def get(self, i):
+        return self.list[i]
 
+    def find_pos(self, zhi):
+        for i, item in enumerate(self.list):
+            if item==zhi:
+                return i
+        return -1
 
 class TianDiPan(object):
     '''
@@ -66,32 +73,61 @@ class TianDiPan(object):
     ZHI_to_num = dict(zip(ZHI, range(12)))
     def __init__(self, hourZ, YueJiang):
         self.diPan = Pan(ZHI)
-        num_YueJiang = YueJiang if isInstance(YueJiang, int) else ZHI_to_num[YueJiang]
-        num_hourZ    = hourZ    if isInstance(hourZ, int)    else ZHI_to_num[hourZ]
+        num_YueJiang = YueJiang if isinstance(YueJiang, int) else self.ZHI_to_num[YueJiang]
+        num_hourZ    = hourZ    if isinstance(hourZ, int)    else self.ZHI_to_num[hourZ]
         self.tianPan = Pan(ZHI, move=num_YueJiang - num_hourZ)
 
     def get_upper(self, zhi):
         '''
         地盘上神
         '''
-        num_zhi = zhi if isInstance(zhi, int) else ZHI_to_num[zhi]
+        num_zhi = zhi if isinstance(zhi, int) else self.ZHI_to_num[zhi]
+        return self.tianPan.get(num_zhi)
+
 
     def get_under(self, zhi):
         '''
         天盘下神
         '''
+        zhi = ZHI[zhi] if isinstance(zhi, int) else zhi
+        pos = self.tianPan.find_pos(zhi)
+        return self.diPan.get(pos)
+
+    def __str__(self):
+        return self.tianPan.pan
         
 class SiKe(object):
     # GAN      = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"]
     GAN_JIGONG = ["寅", "辰", "巳", "未", "巳", "未", "申", "戌", "亥", "丑"] # 阳干寄禄， 阴干寄冠带
+    GAN_to_ZHI = dict(zip(GAN, GAN_JIGONG))
     def __init__(self, dayGZ, tianDiPan):
         '''
         :param str(2) dayGZ
         '''
         assert len(dayGZ) == 2
+        self.tianDiPan = tianDiPan
         dayG = dayGZ[0]
+        gan_jigong = self.GAN_to_ZHI[dayG]
         dayZ = dayGZ[1]
-        
+        self.ke = []
+        under   = [''] * 4
+        upper   = [''] * 4
+        (under[0], upper[0]) = (dayG, tianDiPan.get_upper(gan_jigong))
+        (under[1], upper[1]) = (upper[0], tianDiPan.get_upper(upper[0]))
+        (under[2], upper[2]) = (dayZ, tianDiPan.get_upper(dayZ))
+        (under[3], upper[3]) = (upper[2], tianDiPan.get_upper(upper[2]))
+
+        self.under = under
+        self.upper = upper
+
+        for i in range(4):
+            self.ke.append((under[i], upper[i]))
+#        embed()
+
+    def __str__(self):
+        # a[start:stop:step] # start through not past stop, by step
+        s = "".join(self.upper[::-1]) + '\n' + "".join(self.under[::-1])
+        return s
 
 class SanChuan(object):
     
@@ -108,6 +144,7 @@ class LiuRenPan(object):
         hourZ   : 戌
         Yueiang : 亥
         '''
+        pass
 
 
     @classmethod
