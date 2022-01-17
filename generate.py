@@ -21,6 +21,9 @@ def circle_substract(a, b, n):
         return (0, 0)
 
 def relative_pos(a, b, lst):
+    '''
+    计算list中两个元素相对位置
+    '''
     assert a in lst
     assert b in lst
     return circle_substract(lst.index(a), lst.index(b), len(lst))
@@ -37,6 +40,9 @@ def GANZHI_to_WUXING(x):
     return x
 
 def shengke_WUXING(a, b):
+    '''
+    计算干支或五行的生克
+    '''
     # ["木", "火", "土", "金", "水"]
     a = GANZHI_to_WUXING(a)
     b = GANZHI_to_WUXING(b)
@@ -120,7 +126,10 @@ class TianDiPan(object):
         self.diPan = Pan(ZHI)
         num_YueJiang = YueJiang if isinstance(YueJiang, int) else self.ZHI_to_num[YueJiang]
         num_hourZ    = hourZ    if isinstance(hourZ, int)    else self.ZHI_to_num[hourZ]
-        self.tianPan = Pan(ZHI, move=num_YueJiang - num_hourZ)
+        move=num_YueJiang - num_hourZ
+        self.tianPan = Pan(ZHI, move=move)
+        self.FuYin   = True if move==0 else False
+        self.FanYin  = True if move==6 else False
 
     def get_upper(self, zhi):
         '''
@@ -158,7 +167,7 @@ class SiKe(object):
         gan_jigong = self.GAN_to_ZHI[dayG]
         dayZ = dayGZ[1]
         self.dayZ = dayZ
-        self.ke = []
+        self.Ke = []
         under   = [''] * 4
         upper   = [''] * 4
         (under[0], upper[0]) = (dayG, tianDiPan.get_upper(gan_jigong))
@@ -170,20 +179,22 @@ class SiKe(object):
         self.upper = upper
 
         for i in range(4):
-            self.ke.append((under[i], upper[i]))
+            self.Ke.append((under[i], upper[i]))
 
-        self.shengke_sike()
+        self.shangshen_ke_dayG, self.dayG_ke_shangshen = self.count_yaoke()
+        self.shang_ke_xia, self.xia_zei_shang = self.count_yaoke()
 
-    def shengke_sike(self):
-        self.shengke = [0] * 4
-        for i in range(4):
-            shengke_ke  = shengke_WUXING(self.upper[i], self.under[i])
-            shengke_zei = shengke_WUXING(self.under[i], self.upper[i])
-            if shengke_ke=="克":
-                self.shengke[i] = "克"
-            if shengke_zei=="克":
-                self.shengke[i] = "贼"
-        return self.shengke
+    def count_zeike(self):
+        shang_ke_xia  = [shang for (xia, shang) in self.Ke if shengke_WUXING(shang, xia)=="克"] 
+        xia_zei_shang = [shang for (xia, shang) in self.Ke if shengke_WUXING(xia, shang)=="克"] 
+        return shang_ke_xia, xia_zei_shang
+
+    def count_yaoke(self):
+        shangshen_ke_dayG = [shangshen for shangshen in self.upper if shengke_WUXING(shangshen, self.dayG)=="克"] # 上神克干
+        dayG_ke_shangshen = [shangshen for shangshen in self.upper if shengke_WUXING(self.dayG, shangshen)=="克"] # 干克上神
+        return shangshen_ke_dayG, dayG_ke_shangshen
+
+
 
     def __str__(self):
         # a[start:stop:step] # start through not past stop, by step
@@ -205,9 +216,40 @@ class SanChuan(object):
         zei, ke = self.count_zeike()
         num_zei = len(zei)
         num_ke  = len(ke)
+        if num_zei==0 and num_ke===0:
+            if 上神与日相克:
+               self.yaokefa()
+            else:
+                if 四课全备:
+                    self.maoxingfa()
+                elif 四课三备:
+                    self.biezefa()
+
         if num_zei==1 or ((num_zei==0) and (num_ke==1):
             self.zeike(zei, ke)
-        elif
+        elif num_zei>=2 
+
+    def yaokefa(self):
+        '''
+        遥克法：
+        蒿矢格：一上神(shangshen)克日干
+        弹射格：四课不克日干，取日干克二三四课发用
+
+        '''
+        upper = self.siKe.upper
+        dayG  = self.siKe.dayG
+
+        shangshen_ke_dayG = [shangshen for shangshen in upper if shengke_WUXING(shangshen, dayG)=="克"]
+        if len(shangshen_ke_dayG)>=1:
+            # 蒿矢格
+            chuan1 = shangshen_ke_dayG[0]
+            return chuan1
+        elif len(shangshen_ke_dayG)==2:
+            
+        else:
+            assert len(shangshen_ke_dayG)==0
+            dayG_ke_shangshen = [shangshen for shangshen in upper if shengke_WUXING(dayG, shangshen)=="克"]
+       
 
     def count_zeike(self):
         sike = self.siKe
@@ -219,6 +261,13 @@ class SanChuan(object):
             elif sike.shengke[i]=="贼":
                 zei.append(i)
         return zei, ke
+
+    def count_yaoke(self):
+        upper = self.siKe.upper
+        dayG  = self.siKe.dayG
+        shangshen_ke_dayG = [shangshen for shangshen in upper if shengke_WUXING(shangshen, dayG)=="克"]
+        dayG_ke_shangshen = [shangshen for shangshen in upper if shengke_WUXING(dayG, shangshen)=="克"]
+        return shangshen_ke_dayG, dayG_ke_shangshen
 
     @staticmethod
     def yinyang(ganzhi):
@@ -257,13 +306,10 @@ class SanChuan(object):
                 upper_bihe.append(upper)
             if len(upper_bihe)==1:
                 chuan1 = upper_bihe[0]
-                chuan2, chuan3 = self.chuan23(chuan1)
-                self.chuan = (chuan1, chuan2, chuan3)
-                return True
+                return chuan1
         if len(ke) > 1:
             # 知一课：多上克上选与日干比用者
             pass
-
 
 
 
