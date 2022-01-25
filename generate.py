@@ -1,59 +1,9 @@
 import os
 
 from consts import GAN, ZHI, YUEJIANG, JIEQI, mapping_JIEQI_to_YUEJIANG, WUXING
+from tools import *
 from SolarLunarDatetime import SolarLunarDatetime
 from IPython import embed
-
-GAN_to_WUXING = []
-
-
-
-def circle_substract(a, b, n):
-    '''
-    rtype tuple (count_left(-), count_right(+))
-    '''
-    res = a - b
-    if res<0:
-        return (res, res+n)
-    elif res>0:
-        return (res-n, res)
-    elif res==0:
-        return (0, 0)
-
-def relative_pos(a, b, lst):
-    '''
-    计算list中两个元素相对位置
-    '''
-    assert a in lst
-    assert b in lst
-    return circle_substract(lst.index(a), lst.index(b), len(lst))
-
-def GANZHI_to_WUXING(x):
-    # GAN         = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"]
-    # ZHI         = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"]
-    GAN_to_WUXING = ["木", "木", "火", "火", "土", "土", "金", "金", "水", "水" ]
-    ZHI_to_WUXING = ["水", "土", "木", "木", "土", "火", "火", "土", "金", "金", "土", "水"]
-    if x in GAN:
-        return GAN_to_WUXING[GAN.index(x)]
-    if x in ZHI:
-        return ZHI_to_WUXING[ZHI.index(x)]
-    return x
-
-def shengke_WUXING(a, b):
-    '''
-    计算干支或五行的生克
-    '''
-    # ["木", "火", "土", "金", "水"]
-    a = GANZHI_to_WUXING(a)
-    b = GANZHI_to_WUXING(b)
-    dst = relative_pos(a, b, WUXING)
-    if dst==(-1, 4):
-        shengke = "生"
-    elif dst==(-2, 3):
-        shengke = "克"
-    else:
-        shengke = 0
-    return shengke
 
 class Pan(object):
 #class Pan(list):
@@ -69,20 +19,20 @@ class Pan(object):
         '''
         self.list = lst
         self.pan  = self.list_to_pan()
-        if move != 0 and abs(move < self.SIZE):
-            self.circle_move(move, inplace=True)
+        
+        self.circle_move(move % self.SIZE, inplace=True)
 
     def circle_move(self, k, inplace=False):
         '''
-        在list中是左移，在盘中是逆时针移
+        在list中是右移，在盘中是顺时针移
         move left: lst << k
         :param int k
         :rtype list
         '''
         lst = self.list
-        x = lst[k-1::-1]
-        y = lst[:k-1:-1]
-        new_lst = list(reversed(x+y))
+        x = lst[-k:]
+        y = lst[:-k]
+        new_lst = list(x+y)
         if inplace:
             self.list = new_lst
             self.pan = self.list_to_pan()
@@ -103,13 +53,25 @@ class Pan(object):
         return '\n'.join(pan)
 
     def get(self, i):
-        return self.list[i]
+        return self.list[i % 12]
 
     def find_pos(self, zhi):
         for i, item in enumerate(self.list):
             if item==zhi:
                 return i
         return -1
+
+    def step(self, pos, move=1):
+        ''' 
+        在盘上往前走或往后走
+        '''
+        if isinstance(pos, str):
+            pos = self.find_pos(pos)
+        new_pos = (pos + move) % 12
+        return self.get(new_pos)
+
+    def __str__(self):
+        return self.pan
 
 class TianDiPan(object):
     '''
@@ -122,19 +84,23 @@ class TianDiPan(object):
     "
     '''
     ZHI_to_num = dict(zip(ZHI, range(12)))
-    def __init__(self, hourZ, YueJiang):
+    GAN_JIGONG_to_ZHI = ["寅", "辰", "巳", "未", "巳", "未", "申", "戌", "亥", "丑"] # 阳干寄禄， 阴干寄冠带
+    ZHI_to_GAN_JIGONG = {"丑":"癸", "寅":"甲", "辰":"乙", "巳":["丙","戊"], "未":["丁","己"], "申":"庚", "戌":"辛", "亥":"壬"}
+    def __init__(self, hourZ=None, YueJiang=None, move=None):
         self.diPan = Pan(ZHI)
-        num_YueJiang = YueJiang if isinstance(YueJiang, int) else self.ZHI_to_num[YueJiang]
-        num_hourZ    = hourZ    if isinstance(hourZ, int)    else self.ZHI_to_num[hourZ]
-        move=num_YueJiang - num_hourZ
+        if move is None:
+            num_YueJiang = YueJiang if isinstance(YueJiang, int) else self.ZHI_to_num[YueJiang]
+            num_hourZ    = hourZ    if isinstance(hourZ, int)    else self.ZHI_to_num[hourZ]
+            move = num_hourZ - num_YueJiang
         self.tianPan = Pan(ZHI, move=move)
-        self.FuYin   = True if move==0 else False
-        self.FanYin  = True if move==6 else False
+        self.FuYin   = True if move==0 else False # 伏吟
+        self.FanYin  = True if move==6 else False # 反吟
 
-    def get_upper(self, zhi):
+    def get_upper(self, zhi_or_gan):
         '''
         地盘上神
         '''
+        zhi = self.GAN_JIGONG_to_ZHI[GAN.index(zhi_or_gan)] if zhi_or_gan in GAN else zhi_or_gan
         num_zhi = zhi if isinstance(zhi, int) else self.ZHI_to_num[zhi]
         return self.tianPan.get(num_zhi)
 
@@ -146,6 +112,7 @@ class TianDiPan(object):
         zhi = ZHI[zhi] if isinstance(zhi, int) else zhi
         pos = self.tianPan.find_pos(zhi)
         return self.diPan.get(pos)
+        
 
     def __str__(self):
         return self.tianPan.pan
@@ -182,7 +149,7 @@ class SiKe(object):
             self.Ke.append((under[i], upper[i]))
 
         self.shangshen_ke_dayG, self.dayG_ke_shangshen = self.count_yaoke()
-        self.shang_ke_xia, self.xia_zei_shang = self.count_yaoke()
+        self.shang_ke_xia, self.xia_zei_shang = self.count_zeike()
 
     def count_zeike(self):
         shang_ke_xia  = [shang for (xia, shang) in self.Ke if shengke_WUXING(shang, xia)=="克"] 
@@ -190,8 +157,8 @@ class SiKe(object):
         return shang_ke_xia, xia_zei_shang
 
     def count_yaoke(self):
-        shangshen_ke_dayG = [shangshen for shangshen in self.upper if shengke_WUXING(shangshen, self.dayG)=="克"] # 上神克干
-        dayG_ke_shangshen = [shangshen for shangshen in self.upper if shengke_WUXING(self.dayG, shangshen)=="克"] # 干克上神
+        shangshen_ke_dayG = [shangshen for shangshen in self.upper[1:] if shengke_WUXING(shangshen, self.dayG)=="克"] # 上神克干
+        dayG_ke_shangshen = [shangshen for shangshen in self.upper[1:] if shengke_WUXING(self.dayG, shangshen)=="克"] # 干克上神
         return shangshen_ke_dayG, dayG_ke_shangshen
 
 
@@ -213,10 +180,18 @@ class SanChuan(object):
         self.tianDiPan = siKe.tianDiPan if tianDiPan is None else tianDiPan
 
     def generate_sanchuan(self):
+        if self.tianDiPan.FuYin:
+            pass
+        if self.tianDiPan.FanYin:
+            pass
+
+        if len(self.siKe.xia_zei_shang)==0:
+            self.zeikefa()
+
         zei, ke = self.count_zeike()
         num_zei = len(zei)
         num_ke  = len(ke)
-        if num_zei==0 and num_ke===0:
+        if num_zei==0 and num_ke==0:
             if 上神与日相克:
                self.yaokefa()
             else:
@@ -225,58 +200,64 @@ class SanChuan(object):
                 elif 四课三备:
                     self.biezefa()
 
-        if num_zei==1 or ((num_zei==0) and (num_ke==1):
+        if num_zei==1 or ((num_zei==0) and (num_ke==1)):
             self.zeike(zei, ke)
-        elif num_zei>=2 
+        elif num_zei>=2:
+            pass 
 
     def yaokefa(self):
         '''
         遥克法：
-        蒿矢格：一上神(shangshen)克日干
+        蒿矢格：上神(shangshen)克日干
         弹射格：四课不克日干，取日干克二三四课发用
 
         '''
-        upper = self.siKe.upper
-        dayG  = self.siKe.dayG
 
-        shangshen_ke_dayG = [shangshen for shangshen in upper if shengke_WUXING(shangshen, dayG)=="克"]
+        shangshen_ke_dayG = self.siKe.shangshen_ke_dayG
+        dayG_ke_shangshen = self.siKe.dayG_ke_shangshen
+
+        def bihe_then_shehai(shangshen_ke_dayG):
+            bihe = self.get_bihe(ref=self.siKe.dayG ,lst=shangshen_ke_dayG)
+            if len(bihe)==1:
+                return bihe[0]
+            check_list = shangshen_ke_dayG if len(bihe)==0 else bihe
+            count_shehai = [self.get_shehai(x) for x in check_list]
+            max_shehai = max(count_shehai)
+            assert count_shehai.count(max_shehai)==1
+            return check_list[count_shehai.index(max_shehai)]
+
         if len(shangshen_ke_dayG)>=1:
             # 蒿矢格
-            chuan1 = shangshen_ke_dayG[0]
-            return chuan1
-        elif len(shangshen_ke_dayG)==2:
-            
+            if len(shangshen_ke_dayG)==1 :
+                return shangshen_ke_dayG[0]
+            chuan1 = bihe_then_shehai(shangshen_ke_dayG)
         else:
-            assert len(shangshen_ke_dayG)==0
-            dayG_ke_shangshen = [shangshen for shangshen in upper if shengke_WUXING(dayG, shangshen)=="克"]
+            # 弹射格 
+            if len(shangshen_ke_dayG)==1 :
+                return shangshen_ke_dayG[0]
+            chuan1 = bihe_then_shehai(dayG_ke_shangshen)
+
+        return chuan1
        
 
-    def count_zeike(self):
-        sike = self.siKe
-        ke  = []
-        zei = []
-        for i in range(4):
-            if sike.shengke[i]=="克":
-                ke.append(i)
-            elif sike.shengke[i]=="贼":
-                zei.append(i)
-        return zei, ke
-
-    def count_yaoke(self):
-        upper = self.siKe.upper
-        dayG  = self.siKe.dayG
-        shangshen_ke_dayG = [shangshen for shangshen in upper if shengke_WUXING(shangshen, dayG)=="克"]
-        dayG_ke_shangshen = [shangshen for shangshen in upper if shengke_WUXING(dayG, shangshen)=="克"]
-        return shangshen_ke_dayG, dayG_ke_shangshen
+    @staticmethod
+    def get_yinyang(ganzhi):
+        yangyin = "阳阴"
+        if ganzhi in GAN:
+            return yangyin[GAN.index(ganzhi) % 2]
+        if ganzhi in ZHI:
+            return yangyin[ZHI.index(ganzhi) % 2]
+        raise Exception("ganzhi must be included in GAN or ZHI!")
 
     @staticmethod
-    def yinyang(ganzhi):
-        if ganzhi in GAN:
-            return GAN.index(x) % 2
-        if ganzhi in ZHI:
-            return ZHI_to_WUXING[ZHI.index(x)] % 2
-
-
+    def get_bihe(ref, lst):
+        bihe = []
+        ref_yinyang = SanChuan.get_yinyang(ref)
+        for item in lst:
+            if SanChuan.get_yinyang(item) == ref_yinyang:
+                bihe.append(item)
+        return bihe
+ 
     def zeikefa(self, zei, ke):
         '''
         # 始入课：仅一下贼上
@@ -284,6 +265,7 @@ class SanChuan(object):
         # 元首课：无下贼上，仅一上克下
         '''
         chuan1 = 0
+        sike = self.siKe
         if len(zei)==1:
             # 始入课/重审课
             chuan1 = sike.upper[zei[0]]
@@ -293,28 +275,79 @@ class SanChuan(object):
         return chuan1
 
     def biyongfa(self):
-        zei, ke = self.count_zeike()
-        assert len(zei) > 1 or len(ke) > 1
         sike = self.siKe
-        dayG_yinyang = self.yinyang(self.siKe.dayG)
-        if len(zei) > 1:
+        shang_ke_xia = self.siKe.shang_ke_xia
+        xia_zei_shang = self.siKe.xia_zei_shang
+        chuan1 = 0
+        assert len(shang_ke_xia) > 1 or len(xia_zei_shang) > 1
+        if len(xia_zei_shang) > 1:
             # 比用课：多下贼上选与日干比用者
-            upper_bihe = []
-            for z in zei:
-                upper = sike.upper[z] 
-                if dayG_yinyang==self.yinyang(upper)
-                upper_bihe.append(upper)
-            if len(upper_bihe)==1:
-                chuan1 = upper_bihe[0]
-                return chuan1
-        if len(ke) > 1:
-            # 知一课：多上克上选与日干比用者
-            pass
+            chuan1 = self.get_bihe(dayG, xia_zei_shang)
+        elif len(shang_ke_xia) > 1:
+            # 知一课：多上克下选与日干比用者
+            chuan1 = self.get_bihe(dayG, shang_ke_xia)
+
+        if chuan1==0:
+            return chuan1
+        else:
+            assert isinstance(chuan1, list)
+            if len(chuan1)==1:
+                return chuan1[0]
+            else:
+                return len(chuan1)
+
+    def shehaifa(self, check_list, dayGZ=None):
+        '''
+        涉害课：涉害不等
+        见机格：涉害相等，取四孟
+        察微格：无当四孟，取四仲
+        缀瑕格：无当四仲，阳日取干上神，阴日取支上神
+        '''
+        dayGZ = self.siKe.dayGZ if dayGZ is None else dayGZ
+        check_bihe = self.get_bihe(dayGZ[0], check_list)
+        assert len(check_bihe)==0 or len(check_bihe)==len(check_list), "必须是俱比或俱不比"
+        count_shehai = [self.get_shehai(x) for x in check_list]
+        max_shehai = max(count_shehai)
+        if count_shehai.count(max_shehai)==1:
+            # 涉害课
+            return check_list[count_shehai.index(max_shehai)]
+        else:
+            xiashen = [self.tianDiPan.get_under(x) for x in check_list]
+            # 见机格
+            meng = [x for x in xiashen if x in "寅巳申亥"] # 孟位
+            if len(meng)==1:
+                return self.tianDiPan.get_upper(meng[0])
+            # 察微格
+            zhong = [x for x in xiashen if x in "子卯午酉"] # 仲位
+            if len(zhong)==1:
+                return self.tianDiPan.get_upper(zhong[0])
+            # 缀瑕格
+            if self.get_yinyang(dayGZ[0])=="阳":
+                return self.tianDiPan.get_upper(dayGZ[0])
+            elif self.get_yinyang(dayGZ[0])=="阴":
+                return self.tianDiPan.get_upper(dayGZ[1])
+            else:
+                raise Exception("Value Error, must be one of '阴阳'")
 
 
-
-       
-
+    def get_shehai(self, zhi):
+        tdp = self.tianDiPan
+        pos = tdp.tianPan.find_pos(zhi)
+        count=0
+        while True:
+            current_di = tdp.diPan.get(pos)
+            count +=1 if shengke_WUXING(current_di, zhi)=="克" else 0
+            # count +=1 if shengke_WUXING(tdp.tianPan.get(pos), zhi)=="克" else 0
+            GAN_jigong = tdp.ZHI_to_GAN_JIGONG[current_di] if current_di in tdp.ZHI_to_GAN_JIGONG.keys() else ""
+            for gan in GAN_jigong:
+                count +=1 if shengke_WUXING(gan, zhi)=="克" else 0
+            if current_di==zhi:
+                break
+            # print(pos, current_di, count)
+            pos += 1
+            if pos>30:
+                return -1
+        return count
 
     def chuan23(self, chuan1):
         chuan2 = self.tianDiPan.get_upper(chuan1)
