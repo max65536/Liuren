@@ -1,6 +1,5 @@
 import sxtwl # 阴历日期转换库
 from consts import GAN, ZHI, YUEJIANG, JIEQI, mapping_JIEQI_to_YUEJIANG 
-from IPython import embed
 
 class SolarLunarDatetime(object):
 
