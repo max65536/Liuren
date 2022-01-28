@@ -61,7 +61,7 @@ class Pan(object):
                 return i
         return -1
 
-    def step(self, pos, move=1):
+    def step(self, pos, move):
         ''' 
         在盘上往前走或往后走
         '''
@@ -91,7 +91,7 @@ class TianDiPan(object):
         if move is None:
             num_YueJiang = YueJiang if isinstance(YueJiang, int) else self.ZHI_to_num[YueJiang]
             num_hourZ    = hourZ    if isinstance(hourZ, int)    else self.ZHI_to_num[hourZ]
-            move = num_hourZ - num_YueJiang
+            move = (num_hourZ - num_YueJiang) % 12
         self.tianPan = Pan(ZHI, move=move)
         self.FuYin   = True if move==0 else False # 伏吟
         self.FanYin  = True if move==6 else False # 反吟
@@ -180,57 +180,103 @@ class SanChuan(object):
         self.dayGZ = siKe.dayGZ
         self.tianDiPan = siKe.tianDiPan if tianDiPan is None else tianDiPan
         self.generate_sanchuan()
-        print(self.type)
+
+    def __str__(self):
+        return "\n".join(self.chuan)
+        
 
     def generate_sanchuan(self):
         if self.tianDiPan.FuYin:
             self.type = "伏吟"
+            chuan1 = self.fuyinfa()
         elif self.tianDiPan.FanYin:
             self.type = "反吟"
-
+            chuan1 = self.fanyinfa()
         else:
             num_zei = len(self.siKe.xia_zei_shang)
             num_she = len(self.siKe.shang_ke_xia)
+            num_sike = len(set(self.siKe.upper))
             if num_zei==0 and num_she==0:
-                if len(self.siKe.shangshen_ke_dayG)>0 or len(self.siKe.dayG_ke_shangshen)>0:
+                if num_sike==2:
+                    # 四课两备 不取遥克 
+                    self.type = "八专"
+                    chuan1 = self.bazhuanfa()
+                elif len(self.siKe.shangshen_ke_dayG)>0 or len(self.siKe.dayG_ke_shangshen)>0:
                     self.type = "遥克"
                     chuan1 = self.yaokefa()
-                else:
-                    num_sike = len(set(self.siKe.upper))
+                    chuan2, chuan3 = self.chuan23(chuan1)
+                    self.chuan = (chuan1, chuan2, chuan3)
+                else:                    
                     if num_sike==4:
-                        # 四课全备
+                        # 四课全备 有遥克取遥克
                         self.type = "昴星"
                         chuan1 = self.maoxingfa()
-                    elif num_sike==3:
-                        # 四课三备
+                    else:
+                        assert num_sike==3
+                        # 四课三备 有遥克取遥克
                         self.type = "别责"
-                        self.biezefa()
-                    else:
-                        assert num_sike==2
-                        self.type = "八专"
-
-            elif num_zei==1 or (num_zei==0 and num_she==1):
-                self.type = "贼克"
-                chuan1 = self.zeikefa(zei=self.siKe.xia_zei_shang, ke=self.siKe.shang_ke_xia)
-                chuan2, chuan3 = self.chuan23(chuan1)
+                        chuan1 = self.biezefa()
             else:
-                bihe = self.biyongfa()
-                # print("比合=", bihe)
-                if isinstance(bihe, list) and len(bihe)==1:
-                    self.type = "比用"
-                    chuan1 = bihe[0]
-                else:
-                    self.type = "涉害"
-                    if bihe==0:
-                        chuan1 = self.shehaifa(self.siKe.upper)
-                    else:
-                        chuan1 = self.shehaifa(bihe)
-                    
+                chuan1 = self.zeike_then_biyong_then_shehai()
                 chuan2, chuan3 = self.chuan23(chuan1)
-        #self.chuan = [chuan1, chuan2, chuan3]
-        self.chuan1 = chuan1
-        print(self.type, chuan1)
-        
+                self.chuan = (chuan1, chuan2, chuan3)
+        return self.chuan
+
+
+    def fuyinfa(self):
+        '''
+        伏吟法
+        '''
+        def get_chuan2(chuan1, ganzhi):
+            xing = self.get_ZHI_xiangxing(chuan1)
+            chuan2 = self.tianDiPan.get_upper(ganzhi) if chuan1==xing else xing
+            return chuan2
+
+        if len(self.siKe.xia_zei_shang)==1:
+            # 不虞格
+            chuan1 = self.siKe.xia_zei_shang[0]
+            chuan2 = get_chuan2(chuan1=chuan1, ganzhi=self.dayGZ[1])
+        elif len(self.siKe.shang_ke_xia)==1:
+            # 不虞格
+            chuan1 = self.siKe.shang_ke_xia[0]
+            chuan2 = get_chuan2(chuan1=chuan1, ganzhi=self.dayGZ[1])
+        else:
+            assert len(self.siKe.xia_zei_shang)==0 and len(self.siKe.shang_ke_xia)==0
+            if self.get_yinyang(self.dayGZ[0])=="阳":
+                # 自任格
+                chuan1 = self.tianDiPan.get_upper(self.dayGZ[0])
+                chuan2 = get_chuan2(chuan1=chuan1, ganzhi=self.dayGZ[1])
+            elif self.get_yinyang(self.dayGZ[0])=="阴":
+                # 自信格
+                chuan1 = self.tianDiPan.get_under(self.dayGZ[1])
+                chuan2 = get_chuan2(chuan1=chuan1, ganzhi=self.dayGZ[0])
+            else:
+                raise ValueError("must be one of '阴阳'")
+        xing = self.get_ZHI_xiangxing(chuan2)
+        chuan3 = self.get_ZHI_liuchong(chuan2) if chuan2==xing else xing
+        self.chuan = (chuan1, chuan2, chuan3)
+        return chuan1
+
+    def fanyinfa(self):
+        '''
+        返吟法
+        无依格:有贼克以贼克发用
+        无奈格:无贼克以驿马发用
+
+        '''
+        chuan1 = self.zeike_then_biyong_then_shehai(type_overwrite="返吟", sike_may_substitute_bihe=False)
+        if chuan1==-1:
+            # 无奈格
+            chuan1 = self.get_yima(self.dayGZ[1])
+            chuan2 = self.tianDiPan.get_upper(self.dayGZ[1])
+            chuan3 = self.tianDiPan.get_upper(self.dayGZ[0])
+        else:
+            # 无依格
+            chuan2 = self.get_ZHI_liuchong(chuan1)
+            chuan3 = self.get_ZHI_liuchong(chuan2)
+        self.chuan = (chuan1, chuan2, chuan3)
+        return chuan1
+
 
     def yaokefa(self):
         '''
@@ -274,38 +320,72 @@ class SanChuan(object):
             chuan1 = self.tianDiPan.get_upper("酉")
             chuan2 = self.tianDiPan.get_upper(self.dayGZ[1])
             chuan3 = self.tianDiPan.get_upper(self.dayGZ[0])
-        else:
-            assert self.get_yinyang(self.dayGZ[0])=="阴"
+        elif self.get_yinyang(self.dayGZ[0])=="阴":
             chuan1 = self.tianDiPan.get_under("酉")
             chuan2 = self.tianDiPan.get_upper(self.dayGZ[0])
             chuan3 = self.tianDiPan.get_upper(self.dayGZ[1])
-
-        self.chuan = [chuan1, chuan2, chuan3]
+        else:
+            raise ValueError("must be one of '阴阳'")
+        self.chuan = (chuan1, chuan2, chuan3)
         return chuan1
 
     def biezefa(self):
         '''
         别责法
         '''
-        pass
+        if self.get_yinyang(self.dayGZ[0])=="阳":
+            Gan_he = self.get_GAN_wuhe(self.dayGZ[0]) # 天干五合，取干之五合
+            chuan1 = self.tianDiPan.get_upper(Gan_he)
+            chuan2 = self.tianDiPan.get_upper(self.dayGZ[0])
+            chuan3 = self.tianDiPan.get_upper(self.dayGZ[0])
+        elif self.get_yinyang(self.dayGZ[0])=="阴":
+            Zhi_he1, Zhi_he2 = self.get_ZHI_sanhe(self.dayGZ[1])
+            chuan1 = Zhi_he1
+            chuan2 = self.tianDiPan.get_upper(self.dayGZ[0])
+            chuan3 = self.tianDiPan.get_upper(self.dayGZ[0]) 
+        else:
+            raise ValueError("must be one of '阴阳'")                   
+        self.chuan = (chuan1, chuan2, chuan3)
+        return chuan1
 
-    @staticmethod
-    def get_yinyang(ganzhi):
-        yangyin = "阳阴"
-        if ganzhi in GAN:
-            return yangyin[GAN.index(ganzhi) % 2]
-        if ganzhi in ZHI:
-            return yangyin[ZHI.index(ganzhi) % 2]
-        raise Exception("ganzhi must be included in GAN or ZHI!")
+    def bazhuanfa(self):
+        '''
+        八专法
+        '''
+        if self.get_yinyang(self.dayGZ[0])=="阳":
+            chuan1 = self.tianDiPan.tianPan.step(self.siKe.upper[0], move=2)
+            chuan2 = self.tianDiPan.get_upper(self.dayGZ[0])
+            chuan3 = self.tianDiPan.get_upper(self.dayGZ[0])
+        elif self.get_yinyang(self.dayGZ[0])=="阴":
+            chuan1 = self.tianDiPan.tianPan.step(self.siKe.upper[-1], move=-2)
+            chuan2 = self.tianDiPan.get_upper(self.dayGZ[0])
+            chuan3 = self.tianDiPan.get_upper(self.dayGZ[0])   
+        else:
+            raise ValueError("must be one of '阴阳'")     
+        self.chuan = (chuan1, chuan2, chuan3)
+        return chuan1
 
-    @staticmethod
-    def get_bihe(ref, lst):
-        bihe = []
-        ref_yinyang = SanChuan.get_yinyang(ref)
-        for item in lst:
-            if SanChuan.get_yinyang(item) == ref_yinyang:
-                bihe.append(item)
-        return bihe
+    
+    def zeike_then_biyong_then_shehai(self, type_overwrite=None, sike_may_substitute_bihe=True):
+        chuan1 = self.zeikefa(zei=self.siKe.xia_zei_shang, ke=self.siKe.shang_ke_xia)
+        self.type = "贼克"
+        if chuan1==-1:
+            chuan1 = self.biyongfa()
+            self.type = "比用"
+            # print("比合=", bihe)
+        if chuan1==-1:
+            assert hasattr(self, "_bihe")
+            if len(self._bihe)==0:
+                if sike_may_substitute_bihe:
+                    chuan1 = self.shehaifa(self.siKe.upper)
+                else:
+                    chuan1 = -1
+            else:
+                chuan1 = self.shehaifa(self._bihe)
+            self.type = "涉害"
+        if type_overwrite is not None:
+            self.type = type_overwrite
+        return chuan1
  
     def zeikefa(self, zei, ke):
         '''
@@ -313,33 +393,33 @@ class SanChuan(object):
         # 重审课：除一下贼上，还有上克下，仍取下贼上
         # 元首课：无下贼上，仅一上克下
         '''
-        chuan1 = 0
-        sike = self.siKe
         if len(zei)==1:
             # 始入课/重审课
-            chuan1 = zei[0]
+            return zei[0]
         elif len(zei)==0 and len(ke)==1:
             # 元首课
-            chuan1 = ke[0]
-        return chuan1
+            return ke[0]
+        else:
+            return -1
 
     def biyongfa(self):
         shang_ke_xia = self.siKe.shang_ke_xia
         xia_zei_shang = self.siKe.xia_zei_shang
-        chuan1 = 0
-        assert len(shang_ke_xia) > 1 or len(xia_zei_shang) > 1
+        if len(shang_ke_xia)==0 and len(xia_zei_shang)==0:
+            self._bihe = []
+            return -1
         if len(xia_zei_shang) > 1:
             # 比用课：多下贼上选与日干比用者
-            chuan1 = self.get_bihe(self.siKe.dayG, xia_zei_shang)
+            bihe = self.get_bihe(self.siKe.dayG, xia_zei_shang)
         elif len(shang_ke_xia) > 1:
             # 知一课：多上克下选与日干比用者
-            chuan1 = self.get_bihe(self.siKe.dayG, shang_ke_xia)
+            bihe = self.get_bihe(self.siKe.dayG, shang_ke_xia)
 
-        if chuan1==0:
-            return 0
+        if len(bihe)==1:
+            return bihe[0]
         else:
-            assert isinstance(chuan1, list)
-            return chuan1
+            self._bihe = bihe
+            return -1
 
     def shehaifa(self, check_list, dayGZ=None):
         '''
@@ -398,21 +478,78 @@ class SanChuan(object):
         chuan3 = self.tianDiPan.get_upper(chuan2)
         return (chuan2, chuan3)
 
+    @staticmethod
+    def get_yinyang(ganzhi):
+        yangyin = "阳阴"
+        if ganzhi in GAN:
+            return yangyin[GAN.index(ganzhi) % 2]
+        if ganzhi in ZHI:
+            return yangyin[ZHI.index(ganzhi) % 2]
+        raise Exception("ganzhi must be included in GAN or ZHI!")
+
+    @staticmethod
+    def get_bihe(ref, lst):
+        bihe = []
+        ref_yinyang = SanChuan.get_yinyang(ref)
+        for item in lst:
+            if SanChuan.get_yinyang(item) == ref_yinyang:
+                bihe.append(item)
+        return bihe
+
+    @staticmethod
+    def get_GAN_wuhe(gan):
+        G_he = GAN[(GAN.index(gan) + 5) % 10] # 天干五合，取干之五合
+        return G_he
+
+    @staticmethod
+    def get_ZHI_sanhe(zhi):
+        zhi1 = ZHI[(ZHI.index(zhi) + 4) % 12]
+        zhi2 = ZHI[(ZHI.index(zhi1) + 4) % 12]
+        return zhi1, zhi2
+
+    @staticmethod
+    def get_ZHI_xiangxing(zhi):
+        '''
+        地支相刑
+        '''
+        #ZHI = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"]
+        xing = ["卯", "戌", "巳", "子", "辰", "申", "午", "丑", "寅", "酉", "未", "亥"]
+        map_xing = dict(zip(ZHI, xing))
+        return map_xing[zhi]
+
+    @staticmethod
+    def get_ZHI_liuchong(zhi):
+        '''
+        地支相冲
+        '''
+        chong = ZHI[(ZHI.index(zhi) + 6) % 12]
+        return chong
+
+    @staticmethod
+    def get_yima(zhi):
+        '''
+        驿马: 申子辰在寅, 寅午戌在申, 巳酉丑在亥, 亥卯未在巳
+        '''
+        #ZHI = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"]
+        yima = ["寅", "亥", "申", "巳", "寅", "亥", "申", "巳", "寅", "亥", "申", "巳"]
+        map_yima = dict(zip(ZHI, yima))
+        return map_yima[zhi]        
+
 
 class LiuRenPan(object):
-    GAN_to_num = dict(zip(GAN, range(10)))
-    ZHI_to_num = dict(zip(ZHI, range(12)))
-
     def __init__(self, dayGZ, hourZ, YueJiang):
         '''
         dayGZ   : 甲子
         hourZ   : 戌
         Yueiang : 亥
         '''
-        pass
+        self.tianDiPan = TianDiPan(hourZ=hourZ, YueJiang=YueJiang)
+        self.siKe      = SiKe(dayGZ=dayGZ, tianDiPan=self.tianDiPan)
+        self.sanChuan  = SanChuan(self.siKe)
+    
 
-
-
+    def __str__(self):
+        return '\n\n'.join((str(self.sanChuan), str(self.siKe), str(self.tianDiPan)))
 
 
     @classmethod
@@ -426,9 +563,50 @@ class LiuRenPan(object):
     def generate_TianDiPan():
         pass
 
+def test():
+    checking_list = [{"day":"丙戌","hour":"巳","yuejiang":"申","type":"贼克","chuan1":"申"},
+                     {"day":"丁丑","hour":"子","yuejiang":"申","type":"贼克","chuan1":"巳"},
+                     {"day":"戊寅","hour":"子","yuejiang":"巳","type":"比用","chuan1":"子"},
+                     {"day":"壬辰","hour":"巳","yuejiang":"辰","type":"比用","chuan1":"戌"},
+                     {"day":"甲辰","hour":"卯","yuejiang":"亥","type":"涉害","chuan1":"子"},
+                     {"day":"丙子","hour":"辰","yuejiang":"亥","type":"涉害","chuan1":"子"},
+                     {"day":"庚午","hour":"辰","yuejiang":"申","type":"涉害","chuan1":"辰"},
+                     {"day":"戊辰","hour":"辰","yuejiang":"亥","type":"涉害","chuan1":"子"},
+                     {"day":"壬辰","hour":"寅","yuejiang":"巳","type":"遥克","chuan1":"戌"},
+                     {"day":"壬申","hour":"申","yuejiang":"亥","type":"遥克","chuan1":"巳"},
+                     {"day":"戊寅","hour":"申","yuejiang":"子","type":"昴星","chuan1":"丑"},
+                     {"day":"丁亥","hour":"寅","yuejiang":"巳","type":"昴星","chuan1":"午"},
+                     {"day":"丙辰","hour":"巳","yuejiang":"午","type":"别责","chuan1":"亥"},
+                     {"day":"辛酉","hour":"子","yuejiang":"亥","type":"别责","chuan1":"丑"},
+                     {"day":"甲寅","hour":"申","yuejiang":"巳","type":"八专","chuan1":"丑"},
+                     {"day":"丁未","hour":"酉","yuejiang":"子","type":"八专","chuan1":"亥"},
+                     {"day":"己未","hour":"辰","yuejiang":"午","type":"八专","chuan1":"酉"},
+                     {"day":"癸丑","hour":"子","yuejiang":"子","type":"伏吟","chuan1":"丑"},
+                     {"day":"丙辰","hour":"寅","yuejiang":"寅","type":"伏吟","chuan1":"巳"},
+                     {"day":"丁丑","hour":"申","yuejiang":"申","type":"伏吟","chuan1":"丑"},
+                     {"day":"壬辰","hour":"亥","yuejiang":"亥","type":"伏吟","chuan1":"亥"},
+                     {"day":"庚戌","hour":"巳","yuejiang":"亥","type":"返吟","chuan1":"寅"},
+                     {"day":"辛丑","hour":"寅","yuejiang":"申","type":"返吟","chuan1":"亥"}
+    ]
+    for item in checking_list:
+        print(item)
+        sc = SanChuan(SiKe(item["day"],TianDiPan(hourZ=item["hour"], YueJiang=item["yuejiang"])))
+        if sc.chuan[0]==item["chuan1"] and sc.type==item["type"]:
+            print("checked")
+            print(sc)
+        else:
+            print("error")
+            print(sc)
+            embed()
+            break
+
+
 def main():
-    pass
+    #test()
+    lrp = LiuRenPan('辛丑', '寅', '申')
+    embed()
+
 
 if __name__ == "__main__":
     main()
-    embed()
+#    embed()
