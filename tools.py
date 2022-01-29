@@ -1,7 +1,6 @@
 from consts import GAN, ZHI, YUEJIANG, JIEQI, mapping_JIEQI_to_YUEJIANG, WUXING
 from IPython import embed
 
-
 def circle_substract(a, b, n):
     '''
     rtype tuple (count_left(-), count_right(+))
@@ -16,7 +15,7 @@ def circle_substract(a, b, n):
 
 def relative_pos(a, b, lst):
     '''
-    计算list中两个元素相对位置
+    计算list中两个元素相对位置: a - b
     '''
     assert a in lst
     assert b in lst
@@ -52,3 +51,41 @@ def shengke_WUXING(a, b):
         shengke = 0
     return shengke
 
+def xunshou(dayGZ):
+    '''
+    根据日干支查找旬首
+    :param str(2) dayGZ
+    '''
+    gan_pos = GAN.index(dayGZ[0])
+    zhi_pos = ZHI.index(dayGZ[1])
+    return "甲" + ZHI[(zhi_pos - gan_pos) % 12]
+
+def xundun(dayGZ, zhi):
+    '''
+    六甲旬遁, 根据日干支查找这一旬中支对应的干
+    :param str(2) dayGZ
+    :param str zhi
+    '''
+    xs = xunshou(dayGZ)
+    distance_neg, distance_pos = relative_pos(zhi, xs[1], ZHI)
+    if distance_pos>=10: # distance = 10 or 11 空亡
+        return "⭕"
+    else:
+        return GAN[distance_pos]
+
+def liuqin(other, base):
+    '''
+    取六亲: 
+    :rtype: str other是base的什么六亲
+    '''
+    # ["木", "火", "土", "金", "水"]
+    # base - other = [0, 1, 2, 3, 4]
+    #              = [0,-4,-3,-2,-1]
+    lst            = ["兄", "父", "官", "财", "子"]
+    base  = GANZHI_to_WUXING(base)
+    other = GANZHI_to_WUXING(other)
+    try:
+        dst_neg, dst_pos = relative_pos(base, other, WUXING) # base - other
+    except AssertionError:
+        return None
+    return lst[dst_pos]
