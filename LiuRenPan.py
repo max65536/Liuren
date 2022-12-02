@@ -12,6 +12,7 @@ class LiuRenPan(object):
         '''
         self.tianDiPan = TianDiPan(hourZ=hourZ, YueJiang=YueJiang)
         self.tianDiPan.set_tianjiang(dayG=dayGZ[0])
+        self.tianDiPan.set_dungan(dayGZ=dayGZ)
         self.siKe      = SiKe(dayGZ=dayGZ, tianDiPan=self.tianDiPan)
         self.sanChuan  = SanChuan(self.siKe)
 
@@ -178,21 +179,55 @@ class TianDiPan(object):
             self.day_or_night = "昼" if self.hourZ in "卯辰巳午未申" else "夜"
         self.tianJiangPan = tianJiangPan_daytime if self.day_or_night=="昼" else tianJiangPan_night
 
+    def get_dungan(self, zhi):
+        if hasattr(self, "dunGanPan"):
+            return self.dunGanPan.get(self.tianPan.find_pos(zhi))
+        else:
+            return None
 
-    def __str__(self):
-        if hasattr(self, "tianJiangPan"):
+    def set_dungan(self, dayGZ):
+        '''
+        :param str[2] dayGZ: 日干支
+        return 遁干盘
+        '''
+        # dungan = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸", "⭕", "⭕"]
+        self.dungan = [tools.xundun(dayGZ, zhi) for zhi in self.tianPan.list]
+        self.dunGanPan = Pan(self.dungan)  
+
+    def __str__(self, dungan=True):
+        '''
+        :param bool dungan: 遁干
+        '''
+        if dungan:
+            assert hasattr(self, "dunGanPan")
             lst = self.tianPan.list
             tjp = self.tianJiangPan.list
+            dun = self.dunGanPan.list
             pan = []
-            pan.append("%c%c%c%c%c%c" % ("\u3000", tjp[5], tjp[6], tjp[7], tjp[8], "\u3000"))
-            pan.append("%c%c%c%c%c%c" % ("\u3000", lst[5], lst[6], lst[7], lst[8], "\u3000"))
-            pan.append("%c%c    %c%c" % (  tjp[4], lst[4],                 lst[9], tjp[9]))
-            pan.append("%c%c    %c%c" % (  tjp[3], lst[3],                 lst[10],tjp[10]))
-            pan.append("%c%c%c%c%c%c" % ("\u3000", lst[2], lst[1], lst[0], lst[11],"\u3000"))
-            pan.append("%c%c%c%c%c%c" % ("\u3000", tjp[2], tjp[1], tjp[0], tjp[11],"\u3000"))
-            return '\n'.join(pan)
+            pan.append("%c%c%c%c%c%c%c%c" % ("\u3000", "\u3000", dun[5], dun[6], dun[7], dun[8], "\u3000", "\u3000"))
+            pan.append("%c%c%c%c%c%c%c%c" % ("\u3000", "\u3000", tjp[5], tjp[6], tjp[7], tjp[8], "\u3000", "\u3000"))
+            pan.append("%c%c%c%c%c%c%c%c" % ("\u3000", "\u3000", lst[5], lst[6], lst[7], lst[8], "\u3000", "\u3000"))
+            pan.append("%c%c%c    %c%c%c" % ( dun[4], tjp[4],    lst[4],                 lst[9], tjp[9], dun[9]))
+            pan.append("%c%c%c    %c%c%c" % ( dun[3], tjp[3],    lst[3],                 lst[10],tjp[10],dun[10] ))
+            pan.append("%c%c%c%c%c%c%c%c" % ("\u3000", "\u3000", lst[2], lst[1], lst[0], lst[11], "\u3000", "\u3000"))
+            pan.append("%c%c%c%c%c%c%c%c" % ("\u3000", "\u3000", tjp[2], tjp[1], tjp[0], tjp[11], "\u3000", "\u3000"))
+            pan.append("%c%c%c%c%c%c%c%c" % ("\u3000", "\u3000", dun[2], dun[1], dun[0], dun[11], "\u3000", "\u3000"))
+            return '\n'.join(pan)            
         else:
-            return self.tianPan.pan
+            if hasattr(self, "tianJiangPan"):
+                lst = self.tianPan.list
+                tjp = self.tianJiangPan.list
+                pan = []
+                pan.append("%c%c%c%c%c%c" % ("\u3000", tjp[5], tjp[6], tjp[7], tjp[8], "\u3000"))
+                pan.append("%c%c%c%c%c%c" % ("\u3000", lst[5], lst[6], lst[7], lst[8], "\u3000"))
+                pan.append("%c%c    %c%c" % (  tjp[4], lst[4],                 lst[9], tjp[9]))
+                pan.append("%c%c    %c%c" % (  tjp[3], lst[3],                 lst[10],tjp[10]))
+                pan.append("%c%c%c%c%c%c" % ("\u3000", lst[2], lst[1], lst[0], lst[11],"\u3000"))
+                pan.append("%c%c%c%c%c%c" % ("\u3000", tjp[2], tjp[1], tjp[0], tjp[11],"\u3000"))
+                return '\n'.join(pan)
+            else:
+                return self.tianPan.pan
+
         
 class SiKe(object):
     # GAN      = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"]
@@ -245,9 +280,9 @@ class SiKe(object):
     def __str__(self):
         if hasattr(self, "upper_tianjiang"):
             ke = []
-            ke.append("\u3000%s\u3000" % "".join(self.upper_tianjiang[::-1]))
-            ke.append("\u3000%s\u3000" % "".join(self.upper[::-1]))
-            ke.append("\u3000%s\u3000" % "".join(self.under[::-1]))
+            ke.append("\u3000\u3000%s\u3000\u3000" % "".join(self.upper_tianjiang[::-1]))
+            ke.append("\u3000\u3000%s\u3000\u3000" % "".join(self.upper[::-1]))
+            ke.append("\u3000\u3000%s\u3000\u3000" % "".join(self.under[::-1]))
             s = "\n".join(ke)
         else:
             # a[start:stop:step] # start through not past stop, by step
@@ -275,9 +310,9 @@ class SanChuan(object):
     def __str__(self):
         if hasattr(self, "chuan_tianjiang"):
             sc = []
-            sc.append("\u3000%c%c%c%c\u3000" % (self.liu_qin[0], self.xun_dun[0], self.chuan[0], self.chuan_tianjiang[0]))
-            sc.append("\u3000%c%c%c%c\u3000" % (self.liu_qin[1], self.xun_dun[1], self.chuan[1], self.chuan_tianjiang[1]))
-            sc.append("\u3000%c%c%c%c\u3000" % (self.liu_qin[2], self.xun_dun[2], self.chuan[2], self.chuan_tianjiang[2]))
+            sc.append("\u3000\u3000%c%c%c%c\u3000\u3000" % (self.liu_qin[0], self.xun_dun[0], self.chuan[0], self.chuan_tianjiang[0]))
+            sc.append("\u3000\u3000%c%c%c%c\u3000\u3000" % (self.liu_qin[1], self.xun_dun[1], self.chuan[1], self.chuan_tianjiang[1]))
+            sc.append("\u3000\u3000%c%c%c%c\u3000\u3000" % (self.liu_qin[2], self.xun_dun[2], self.chuan[2], self.chuan_tianjiang[2]))
             return "\n".join(sc)
         else:
             return "\n".join(self.chuan)
