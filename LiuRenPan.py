@@ -318,15 +318,16 @@ class SanChuan(object):
             return "\n".join(self.chuan)
 
     def generate_sanchuan(self):
-        if self.tianDiPan.FuYin:
+        num_zei = len(self.siKe.xia_zei_shang)
+        num_she = len(self.siKe.shang_ke_xia)
+        sum_ke = len(self.siKe.shangshen_ke_dayG) + len(self.siKe.dayG_ke_shangshen) + num_zei + num_she
+        if self.tianDiPan.FuYin and sum_ke==0:
             self.type = "伏吟"
             chuan1 = self.fuyinfa()
-        elif self.tianDiPan.FanYin:
+        elif self.tianDiPan.FanYin and sum_ke==0:
             self.type = "反吟"
             chuan1 = self.fanyinfa()
         else:
-            num_zei = len(self.siKe.xia_zei_shang)
-            num_she = len(self.siKe.shang_ke_xia)
             num_sike = len(set(self.siKe.upper))
             if num_zei==0 and num_she==0:
                 if num_sike==2:
