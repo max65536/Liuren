@@ -10,3 +10,4 @@ class Printer(object):
 
     def to_fig(self):
         pass
+    

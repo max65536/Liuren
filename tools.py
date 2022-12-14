@@ -69,7 +69,7 @@ def xundun(dayGZ, zhi):
     xs = xunshou(dayGZ)
     distance_neg, distance_pos = relative_pos(zhi, xs[1], ZHI)
     if distance_pos>=10: # distance = 10 or 11 空亡
-        return "⭕"
+        return "〇"
     else:
         return GAN[distance_pos]
 

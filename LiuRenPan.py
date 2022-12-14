@@ -15,6 +15,7 @@ class LiuRenPan(object):
         self.tianDiPan.set_dungan(dayGZ=dayGZ)
         self.siKe      = SiKe(dayGZ=dayGZ, tianDiPan=self.tianDiPan)
         self.sanChuan  = SanChuan(self.siKe)
+        self.generate_12_gong()
 
     def __str__(self):
         return '\n\n'.join((str(self.sanChuan), str(self.siKe), str(self.tianDiPan)))
@@ -27,8 +28,12 @@ class LiuRenPan(object):
         dayGZ = panNum[:2] 
         hourZ = panNum[2:-1]
 
-    def generate_TianDiPan():
-        pass
+    def generate_12_gong(self):
+        gong_list = []
+        tdp = self.tianDiPan
+        for i in range(12):
+            gong_list.append(Gong(tdp.diPan[i], tdp.tianPan[i], tdp.tianJiangPan[i], tdp.dungan[i]))
+        self.gong = Pan(gong_list, move=0)
 
 
 class Pan(object):
@@ -43,7 +48,7 @@ class Pan(object):
         :param list lst
         :int move
         '''
-        self.list = list(lst)
+        self.items = list(lst)
         self.pan  = self.list_to_pan()
         
         self.circle_move(move % self.SIZE, inplace=True)
@@ -55,12 +60,12 @@ class Pan(object):
         :param int k
         :rtype list
         '''
-        lst = self.list
+        lst = self.items
         x = lst[-k:]
         y = lst[:-k]
         new_lst = list(x+y)
         if inplace:
-            self.list = new_lst
+            self.items = new_lst
             self.pan = self.list_to_pan()
         return new_lst
 
@@ -69,7 +74,9 @@ class Pan(object):
         :param list lst
         rtype: str
         '''
-        lst = self.list
+        lst = self.items
+        if type(lst[0]) is not str:
+            return None
         assert len(lst)==12
         pan = []
         pan.append("%c%c%c%c" % (lst[5], lst[6], lst[7], lst[8]))
@@ -79,10 +86,10 @@ class Pan(object):
         return '\n'.join(pan)
 
     def get(self, i):
-        return self.list[i % 12]
+        return self.items[i % 12]
 
     def find_pos(self, zhi):
-        for i, item in enumerate(self.list):
+        for i, item in enumerate(self.items):
             if item==zhi:
                 return i
         return -1
@@ -98,6 +105,20 @@ class Pan(object):
 
     def __str__(self):
         return self.pan
+
+    def __getitem__(self, num):
+        return self.items[num % 12]
+
+class Gong(object):
+    def __init__(self, di, tian, jiang=None, gan=None):
+        self.diPan      = di
+        self.tianPan    = tian
+        self.tianJiang  = jiang
+        self.dunGan     = gan
+        self.down_to_up = reversed([di, tian, jiang, gan])
+    
+    def __str__(self) -> str:
+        return '\n'.join(self.down_to_up)
 
 class TianDiPan(object):
     '''
@@ -190,8 +211,8 @@ class TianDiPan(object):
         :param str[2] dayGZ: 日干支
         return 遁干盘
         '''
-        # dungan = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸", "⭕", "⭕"]
-        self.dungan = [tools.xundun(dayGZ, zhi) for zhi in self.tianPan.list]
+        # dungan = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸", "〇", "〇"]
+        self.dungan = [tools.xundun(dayGZ, zhi) for zhi in self.tianPan.items]
         self.dunGanPan = Pan(self.dungan)  
 
     def __str__(self, dungan=True):
@@ -200,9 +221,9 @@ class TianDiPan(object):
         '''
         if dungan:
             assert hasattr(self, "dunGanPan")
-            lst = self.tianPan.list
-            tjp = self.tianJiangPan.list
-            dun = self.dunGanPan.list
+            lst = self.tianPan.items
+            tjp = self.tianJiangPan.items
+            dun = self.dunGanPan.items
             pan = []
             pan.append("%c%c%c%c%c%c%c%c" % ("\u3000", "\u3000", dun[5], dun[6], dun[7], dun[8], "\u3000", "\u3000"))
             pan.append("%c%c%c%c%c%c%c%c" % ("\u3000", "\u3000", tjp[5], tjp[6], tjp[7], tjp[8], "\u3000", "\u3000"))
@@ -215,8 +236,8 @@ class TianDiPan(object):
             return '\n'.join(pan)            
         else:
             if hasattr(self, "tianJiangPan"):
-                lst = self.tianPan.list
-                tjp = self.tianJiangPan.list
+                lst = self.tianPan.items
+                tjp = self.tianJiangPan.items
                 pan = []
                 pan.append("%c%c%c%c%c%c" % ("\u3000", tjp[5], tjp[6], tjp[7], tjp[8], "\u3000"))
                 pan.append("%c%c%c%c%c%c" % ("\u3000", lst[5], lst[6], lst[7], lst[8], "\u3000"))
