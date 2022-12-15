@@ -2,6 +2,7 @@ from consts import GAN, ZHI, mapping_GAN_to_GUIREN_pos, TIANJIANG_short
 import tools
 
 from IPython import embed
+import prettytable
 
 class LiuRenPan(object):
     def __init__(self, dayGZ, hourZ, YueJiang):
@@ -10,6 +11,8 @@ class LiuRenPan(object):
         hourZ   : 戌
         Yueiang : 亥
         '''
+        self.dayGZ     = dayGZ
+        self.YueJIang  = YueJiang
         self.tianDiPan = TianDiPan(hourZ=hourZ, YueJiang=YueJiang)
         self.tianDiPan.set_tianjiang(dayG=dayGZ[0])
         self.tianDiPan.set_dungan(dayGZ=dayGZ)
@@ -34,6 +37,9 @@ class LiuRenPan(object):
         for i in range(12):
             gong_list.append(Gong(tdp.diPan[i], tdp.tianPan[i], tdp.tianJiangPan[i], tdp.dungan[i]))
         self.gong = Pan(gong_list, move=0)
+
+    def print_prettytable():
+        pass
 
 
 class Pan(object):
@@ -92,7 +98,7 @@ class Pan(object):
         for i, item in enumerate(self.items):
             if item==zhi:
                 return i
-        return -1
+        return None
 
     def step(self, pos, move):
         ''' 
@@ -100,7 +106,7 @@ class Pan(object):
         '''
         if isinstance(pos, str):
             pos = self.find_pos(pos)
-        new_pos = (pos + move) % 12
+        new_pos = (pos + move) % self.SIZE
         return self.get(new_pos)
 
     def __str__(self):
@@ -143,6 +149,7 @@ class TianDiPan(object):
         '''
         self.diPan = Pan(ZHI)
         self.hourZ = hourZ
+        self.YueJiang = YueJiang
         if move is None:
             num_YueJiang = YueJiang if isinstance(YueJiang, int) else self.ZHI_to_num[YueJiang]
             num_hourZ    = hourZ    if isinstance(hourZ, int)    else self.ZHI_to_num[hourZ]

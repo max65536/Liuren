@@ -30,6 +30,7 @@ def GANZHI_to_WUXING(x):
         return GAN_to_WUXING[GAN.index(x)]
     if x in ZHI:
         return ZHI_to_WUXING[ZHI.index(x)]
+    assert x in WUXING
     return x
 
 def shengke_WUXING(a, b):
@@ -50,6 +51,23 @@ def shengke_WUXING(a, b):
     else:
         shengke = 0
     return shengke
+
+def WUXING_guanxi(other, base):
+    '''
+    计算干支或五行的关系
+    a [同，我生，生我，克我，我克] b
+    a [王，相，休，  囚，  死] b
+    '''
+    other = GANZHI_to_WUXING(other)
+    base  = GANZHI_to_WUXING(base)
+    # lst = ["兄", "父", "官", "财", "子"]
+    lst =   ["同", "生我", "克我", "我克", "我生"]
+    try:
+        dst_neg, dst_pos = relative_pos(base, other, WUXING) # base - other
+    except AssertionError:
+        return None
+    return lst[dst_pos]
+
 
 def xunshou(dayGZ):
     '''
@@ -89,3 +107,44 @@ def liuqin(other, base):
     except AssertionError:
         return None
     return lst[dst_pos]
+
+def shishen(other, base):
+    '''
+    取十神: 
+    同性如阳克阳为强克, 异性为弱克
+    同性生为偏，异性生为正
+    '''
+    other_wuxing = GANZHI_to_WUXING(other)
+    base_wuxing  = GANZHI_to_WUXING(base)
+    same_yinyang = ["比肩", "偏印", "七杀", "偏财", "食神"]
+    diff_yinyang = ["劫财", "正印", "正官", "正财", "伤官"]
+    # lst = ["兄", "父", "官", "财", "子"]
+    # lst =   ["同"， "生我", "克我", "我克", "我生"]
+    try:
+        dst_neg, dst_pos = relative_pos(base_wuxing, other_wuxing, WUXING) # base - other
+    except AssertionError:
+        return None
+    if yinyang(other)==yinyang(base):
+        return same_yinyang[dst_pos]
+    else:
+        return diff_yinyang[dst_pos]
+
+
+def yinyang(x):
+    yang = ["甲", "丙", "戊", "庚", "壬"] + ["子", "寅", "辰", "午", "申", "戌"]
+    yin  = ["乙", "丁", "己", "辛", "癸"] + ["丑", "卯", "巳", "未", "酉", "亥"]
+    if x in yang:
+        return ""
+    elif x in yin:
+        return ""
+    else:
+        raise ValueError("value Error:" + str(x))
+
+
+def wrap_color(x):
+    x_wuxing = GANZHI_to_WUXING(x)
+    WUXING_to_color = {"木":32,"火":31 ,"土":33,"金":93,"水":34}
+    color_code = WUXING_to_color[x_wuxing]
+    control_head = "\033[%dm" % color_code
+    control_end  = "\033[0m"
+    return ' '.join([control_head, x, control_end]) 

@@ -28,7 +28,7 @@ class SolarLunarDatetime(object):
                 print("YueJiang not found")
                 return -1
         self.JieQi = jieqi
-        return mapping_JIEQI_to_YUEJIANG[jieqi]
+        return YUEJIANG[mapping_JIEQI_to_YUEJIANG[jieqi]]
         
 
     def get_GanZhi(self, date, hour, is_boundary_chunjie=False, separate_ZiShi=False):
