@@ -20,6 +20,10 @@ class LiuRenPan(object):
         self.sanChuan  = SanChuan(self.siKe)
         self.generate_12_gong()
 
+    @classmethod
+    def init_from_sizhu(cls, sizhu, YueJiang): 
+        return cls(dayGZ=sizhu['day'], hourZ=sizhu['hour'][-1], YueJiang=YueJiang)
+
     def __str__(self):
         return '\n\n'.join((str(self.sanChuan), str(self.siKe), str(self.tianDiPan)))
 
@@ -121,7 +125,7 @@ class Gong(object):
         self.tianPan    = tian
         self.tianJiang  = jiang
         self.dunGan     = gan
-        self.down_to_up = reversed([di, tian, jiang, gan])
+        self.down_to_up = [di, tian, jiang, gan]
     
     def __str__(self) -> str:
         return '\n'.join(self.down_to_up)
