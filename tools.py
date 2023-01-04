@@ -1,4 +1,4 @@
-from consts import GAN, ZHI, YUEJIANG, JIEQI, mapping_JIEQI_to_YUEJIANG, WUXING
+from consts import GAN, ZHI, YUEJIANG, JIEQI, mapping_JIEQI_to_YUEJIANG, WUXING, YUEJIANG_to_NAME
 from IPython import embed
 
 def circle_substract(a, b, n):
@@ -78,6 +78,15 @@ def xunshou(dayGZ):
     zhi_pos = ZHI.index(dayGZ[1])
     return "甲" + ZHI[(zhi_pos - gan_pos) % 12]
 
+def kongwang(dayGZ):
+    '''
+    根据日干支查找空亡
+    :param str(2) dayGZ
+    '''
+    gan_pos = GAN.index(dayGZ[0])
+    zhi_pos = ZHI.index(dayGZ[1])
+    return ZHI[(zhi_pos - gan_pos -2) % 12] + ZHI[(zhi_pos - gan_pos -1) % 12]
+
 def xundun(dayGZ, zhi):
     '''
     六甲旬遁, 根据日干支查找这一旬中支对应的干
@@ -148,3 +157,6 @@ def wrap_color(x):
     control_head = "\033[%dm" % color_code
     control_end  = "\033[0m"
     return ' '.join([control_head, x, control_end]) 
+
+def yuejiang_name(yuejiang):
+    return YUEJIANG_to_NAME[yuejiang]

@@ -236,26 +236,26 @@ class TianDiPan(object):
             tjp = self.tianJiangPan.items
             dun = self.dunGanPan.items
             pan = []
-            pan.append("%c%c%c%c%c%c%c%c" % ("\u3000", "\u3000", dun[5], dun[6], dun[7], dun[8], "\u3000", "\u3000"))
-            pan.append("%c%c%c%c%c%c%c%c" % ("\u3000", "\u3000", tjp[5], tjp[6], tjp[7], tjp[8], "\u3000", "\u3000"))
-            pan.append("%c%c%c%c%c%c%c%c" % ("\u3000", "\u3000", lst[5], lst[6], lst[7], lst[8], "\u3000", "\u3000"))
-            pan.append("%c%c%c    %c%c%c" % ( dun[4], tjp[4],    lst[4],                 lst[9], tjp[9], dun[9]))
-            pan.append("%c%c%c    %c%c%c" % ( dun[3], tjp[3],    lst[3],                 lst[10],tjp[10],dun[10] ))
-            pan.append("%c%c%c%c%c%c%c%c" % ("\u3000", "\u3000", lst[2], lst[1], lst[0], lst[11], "\u3000", "\u3000"))
-            pan.append("%c%c%c%c%c%c%c%c" % ("\u3000", "\u3000", tjp[2], tjp[1], tjp[0], tjp[11], "\u3000", "\u3000"))
-            pan.append("%c%c%c%c%c%c%c%c" % ("\u3000", "\u3000", dun[2], dun[1], dun[0], dun[11], "\u3000", "\u3000"))
+            pan.append("%c%c%c%c%c%c%c%c" % ("\u3000", "\u3000", dun[5],   dun[6],  dun[7], dun[8], "\u3000", "\u3000"))
+            pan.append("%c%c%c%c%c%c%c%c" % ("\u3000", "\u3000", tjp[5],   tjp[6],  tjp[7], tjp[8], "\u3000", "\u3000"))
+            pan.append("%c%c%c%c%c%c%c%c" % ("\u3000", "\u3000", lst[5],   lst[6],  lst[7], lst[8], "\u3000", "\u3000"))
+            pan.append("%c%c%c%c%c%c%c%c" % ( dun[4], tjp[4],    lst[4], "\u3000","\u3000", lst[9], tjp[9], dun[9]))
+            pan.append("%c%c%c%c%c%c%c%c" % ( dun[3], tjp[3],    lst[3], "\u3000","\u3000", lst[10],tjp[10],dun[10] ))
+            pan.append("%c%c%c%c%c%c%c%c" % ("\u3000", "\u3000", lst[2],   lst[1],  lst[0], lst[11], "\u3000", "\u3000"))
+            pan.append("%c%c%c%c%c%c%c%c" % ("\u3000", "\u3000", tjp[2],   tjp[1],  tjp[0], tjp[11], "\u3000", "\u3000"))
+            pan.append("%c%c%c%c%c%c%c%c" % ("\u3000", "\u3000", dun[2],   dun[1],  dun[0], dun[11], "\u3000", "\u3000"))
             return '\n'.join(pan)            
         else:
             if hasattr(self, "tianJiangPan"):
                 lst = self.tianPan.items
                 tjp = self.tianJiangPan.items
                 pan = []
-                pan.append("%c%c%c%c%c%c" % ("\u3000", tjp[5], tjp[6], tjp[7], tjp[8], "\u3000"))
-                pan.append("%c%c%c%c%c%c" % ("\u3000", lst[5], lst[6], lst[7], lst[8], "\u3000"))
-                pan.append("%c%c    %c%c" % (  tjp[4], lst[4],                 lst[9], tjp[9]))
-                pan.append("%c%c    %c%c" % (  tjp[3], lst[3],                 lst[10],tjp[10]))
-                pan.append("%c%c%c%c%c%c" % ("\u3000", lst[2], lst[1], lst[0], lst[11],"\u3000"))
-                pan.append("%c%c%c%c%c%c" % ("\u3000", tjp[2], tjp[1], tjp[0], tjp[11],"\u3000"))
+                pan.append("%c%c%c%c%c%c" % ("\u3000", tjp[5],   tjp[6],  tjp[7], tjp[8], "\u3000"))
+                pan.append("%c%c%c%c%c%c" % ("\u3000", lst[5],   lst[6],  lst[7], lst[8], "\u3000"))
+                pan.append("%c%c%c%c%c%c" % (  tjp[4], lst[4], "\u3000","\u3000", lst[9], tjp[9]))
+                pan.append("%c%c%c%c%c%c" % (  tjp[3], lst[3], "\u3000","\u3000", lst[10],tjp[10]))
+                pan.append("%c%c%c%c%c%c" % ("\u3000", lst[2],   lst[1],  lst[0], lst[11],"\u3000"))
+                pan.append("%c%c%c%c%c%c" % ("\u3000", tjp[2],   tjp[1],  tjp[0], tjp[11],"\u3000"))
                 return '\n'.join(pan)
             else:
                 return self.tianPan.pan
@@ -580,7 +580,7 @@ class SanChuan(object):
             # 知一课：多上克下选与日干比用者
             bihe = self.get_bihe(self.siKe.dayG, shang_ke_xia)
 
-        if len(bihe)==1:
+        if len(set(bihe))==1:
             return bihe[0]
         else:
             self._bihe = bihe
