@@ -2,7 +2,6 @@ from consts import GAN, ZHI, mapping_GAN_to_GUIREN_pos, TIANJIANG_short
 import tools
 
 from IPython import embed
-import prettytable
 
 class LiuRenPan(object):
     def __init__(self, dayGZ, hourZ, YueJiang):
