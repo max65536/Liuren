@@ -160,3 +160,6 @@ def wrap_color(x):
 
 def yuejiang_name(yuejiang):
     return YUEJIANG_to_NAME[yuejiang]
+
+def sizhu_to_string(sizhu):
+    return sizhu['year'] + sizhu['month'] + sizhu['day'] + sizhu['hour']

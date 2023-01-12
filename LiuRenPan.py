@@ -113,7 +113,13 @@ class Pan(object):
         return self.get(new_pos)
 
     def __str__(self):
-        return self.pan
+        return ''.join(self.items)
+
+    def compact_string(self):
+        return ''.join(self.items)        
+
+    def __repr__(self) -> str:
+        return '\n'+self.pan
 
     def __getitem__(self, num):
         return self.items[num % 12]
@@ -320,6 +326,12 @@ class SiKe(object):
             s = "".join(self.upper[::-1]) + '\n' + "".join(self.under[::-1])
         return s
 
+    def compact_string(self):
+        res = []
+        for i in range(4):
+            res += [*self.Ke[i], self.upper_tianjiang[i]]
+        return ''.join(res)
+
 class SanChuan(object):
     '''
     九宗门:
@@ -347,6 +359,13 @@ class SanChuan(object):
             return "\n".join(sc)
         else:
             return "\n".join(self.chuan)
+
+    def compact_string(self):
+        sc = []
+        sc.append("%c%c%c%c" % (self.liu_qin[0], self.xun_dun[0], self.chuan[0], self.chuan_tianjiang[0]))
+        sc.append("%c%c%c%c" % (self.liu_qin[1], self.xun_dun[1], self.chuan[1], self.chuan_tianjiang[1]))
+        sc.append("%c%c%c%c" % (self.liu_qin[2], self.xun_dun[2], self.chuan[2], self.chuan_tianjiang[2]))        
+        return ''.join(sc)
 
     def generate_sanchuan(self):
         num_zei = len(self.siKe.xia_zei_shang)
