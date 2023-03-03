@@ -1,5 +1,4 @@
-from consts import GAN, ZHI, YUEJIANG, JIEQI, mapping_JIEQI_to_YUEJIANG, WUXING, YUEJIANG_to_NAME
-from IPython import embed
+from .consts import GAN, ZHI, YUEJIANG, JIEQI, mapping_JIEQI_to_YUEJIANG, WUXING, YUEJIANG_to_NAME
 
 def circle_substract(a, b, n):
     '''

@@ -1,14 +1,14 @@
-from SolarLunarDatetime import SolarLunarDatetime
-from LiuRenPan import LiuRenPan
+from .SolarLunarDatetime import SolarLunarDatetime
+from .LiuRenPan import LiuRenPan
 import datetime
-from analyser import check_keti, check_bifa
+from .analyser import check_keti, check_bifa
 from IPython import embed
 from pytz import timezone
-from printer import Printer
-from consts import YUEJIANG_to_NAME
-from models import DocumentModel
+from .printer import Printer
+from .consts import YUEJIANG_to_NAME
+from .models import DocumentModel
 
-import tools
+from . import tools
 import asyncio
 
 def datetime_as_timezone(date_time, time_zone):
@@ -60,7 +60,7 @@ class Document(object):
         pass
         
 async def test(loop):
-    import orm
+    from . import orm
     await orm.create_pool(loop=loop,host='localhost',port=3306,user='root',password='root',db='liuren')
 
     res = await DocumentModel.findAll(where="message_id=255")

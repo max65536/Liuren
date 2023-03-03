@@ -1,5 +1,5 @@
-from consts import GAN, ZHI, mapping_GAN_to_GUIREN_pos, TIANJIANG_short
-import tools
+from .consts import GAN, ZHI, mapping_GAN_to_GUIREN_pos, TIANJIANG_short
+from . import tools
 
 from IPython import embed
 

@@ -7,10 +7,10 @@ from telepot.namedtuple import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboar
 from telepot.namedtuple import InlineKeyboardMarkup, InlineKeyboardButton
 from telepot.namedtuple import InlineQueryResultArticle, InlineQueryResultPhoto, InputTextMessageContent
 
-from botkey import key
-from generate import generate
-from document import Document
-from models import DocumentModel
+from .botkey import key
+from .generate import generate
+from .document import Document
+from .models import DocumentModel
 
 """
 $ python3.5 skeletona_route.py <token>

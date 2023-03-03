@@ -1,5 +1,5 @@
 
-from LiuRenPan import LiuRenPan
+from .LiuRenPan import LiuRenPan
 
 class Printer(object):
     def __init__(self, liurenpan, format="string", space='\u3000') -> None:
